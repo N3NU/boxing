@@ -4,68 +4,82 @@ import pandas as pd
 import time
 from send_message import send_email
 import os
-
+from datetime import datetime
 
 def scrape_dk():
     # URL of the DraftKings UFC odds page
     url = "https://sportsbook.draftkings.com/leagues/boxing/boxing"
 
-    # Fetch the HTML content from the URL
-    response = requests.get(url)
+    max_retries = 5
 
-    if response.status_code == 200:
-        # Store response content
-        html_content = response.content
+    retry_delay = 60 # delay in seconds before retrying
 
-        # Parse the HTML content using BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
+    for attempt in range(max_retries):
 
-        # Find the "root" id in the HTML content
-        #fighter_bout_section = soup.find("div", class_="sportsbook-offer-category-card")
+        try:
 
-        #print(fighter_bout_section)
+            # Fetch the HTML content from the URL
+            response = requests.get(url)
 
-        fighters_list = [fighter.text.strip() for fighter in soup.find_all("span", class_="sportsbook-outcome-cell__label")]
+            if response.status_code == 200:
+                # Store response content
+                html_content = response.content
 
-        # Make a list of the first fighters in the bout using the list of all fighters
-        fighter_1 = [fighters_list[i] for i in range(0, len(fighters_list), 2)]
+                # Parse the HTML content using BeautifulSoup
+                soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Make a list of the second fighters (opponents) in the bout using the list of all fighters
-        fighter_2 = [fighters_list[i + 1] for i in range(0, len(fighters_list), 2)]
+                # Find the "root" id in the HTML content
+                #fighter_bout_section = soup.find("div", class_="sportsbook-offer-category-card")
 
-        all_fighters_odds_list = [odds.text.strip() for odds in soup.find_all("span", class_="sportsbook-odds american default-color")]
+                #print(fighter_bout_section)
 
-        # Make a list of the odds for the first fighters
-        fighter_1_odds = [all_fighters_odds_list[i] for i in range(0, len(all_fighters_odds_list), 2)]
+                fighters_list = [fighter.text.strip() for fighter in soup.find_all("span", class_="sportsbook-outcome-cell__label")]
 
-        # Make a list of the odds for the second fighters (opponents)
-        fighter_2_odds = [all_fighters_odds_list[i + 1] for i in range(0, len(all_fighters_odds_list), 2)]
+                # Make a list of the first fighters in the bout using the list of all fighters
+                fighter_1 = [fighters_list[i] for i in range(0, len(fighters_list), 2)]
 
-        # Get all the HTML elements with "a"
-        all_a_tags = soup.find("div", class_="sportsbook-offer-category-card").find_all("a")
+                # Make a list of the second fighters (opponents) in the bout using the list of all fighters
+                fighter_2 = [fighters_list[i + 1] for i in range(0, len(fighters_list), 2)]
 
-        # Pull the bout id from the href found in the "a" element
-        bout_ids = []
-        for a_tag in all_a_tags:
-            href = a_tag.get('href')
-            if href and '/event/' in href:
-                bout_id = href.split('/')[-1]
-                try:
-                    bout_ids.append(int(bout_id))
-                except:
-                    None
+                all_fighters_odds_list = [odds.text.strip() for odds in soup.find_all("span", class_="sportsbook-odds american default-color")]
 
-        # Make a list of the bout ids 
-        fighter_bout_id = bout_ids
+                # Make a list of the odds for the first fighters
+                fighter_1_odds = [all_fighters_odds_list[i] for i in range(0, len(all_fighters_odds_list), 2)]
 
-        # Sort the column data to make ready to return
-        data = list(zip(fighter_1, fighter_1_odds, fighter_2, fighter_2_odds, fighter_bout_id))
+                # Make a list of the odds for the second fighters (opponents)
+                fighter_2_odds = [all_fighters_odds_list[i + 1] for i in range(0, len(all_fighters_odds_list), 2)]
 
-        return data
-    
-    else:
-        print(f"Failed to retrieve data: {response.status_code}")
-        return None
+                # Get all the HTML elements with "a"
+                all_a_tags = soup.find("div", class_="sportsbook-offer-category-card").find_all("a")
+
+                # Pull the bout id from the href found in the "a" element
+                bout_ids = []
+                for a_tag in all_a_tags:
+                    href = a_tag.get('href')
+                    if href and '/event/' in href:
+                        bout_id = href.split('/')[-1]
+                        try:
+                            bout_ids.append(int(bout_id))
+                        except:
+                            None
+
+                # Make a list of the bout ids 
+                fighter_bout_id = bout_ids
+
+                # Sort the column data to make ready to return
+                data = list(zip(fighter_1, fighter_1_odds, fighter_2, fighter_2_odds, fighter_bout_id))
+
+                return data
+            
+            else:
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                print(f"[{current_time}] Failed to retrieve data: {response.status_code}")
+                return None
+            
+        except requests.RequestException as e:
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(f"[{current_time}] Request failed: {e}. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
     
 # Function to append data to a CSV file
 def append_data_to_csv(df, file_path):
@@ -92,7 +106,8 @@ def main():
     
     
     while True:
-        print('running')
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f'[{current_time}] running')
 
         stored_fight_data_df = load_data_from_csv(csv_filename)
 
