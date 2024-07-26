@@ -5,6 +5,7 @@ import time
 from send_message import send_email
 import os
 from datetime import datetime
+import json
 
 def scrape_dk():
     # URL of the DraftKings UFC odds page
@@ -28,12 +29,30 @@ def scrape_dk():
                 # Parse the HTML content using BeautifulSoup
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                # Find the "root" id in the HTML content
-                #fighter_bout_section = soup.find("div", class_="sportsbook-offer-category-card")
+                fighters_list = []
 
-                #print(fighter_bout_section)
+                all_fighters_odds_list = []
 
-                fighters_list = [fighter.text.strip() for fighter in soup.find_all("span", class_="sportsbook-outcome-cell__label")]
+                bout_ids = []
+
+                # Looping through list of html elements that start with "tr"
+                for i in soup.find_all("div", class_="sportsbook-outcome-cell"):
+
+                    if "sportsbook-outcome-cell__label" in str(i) and "sportsbook-odds american default-color" in str(i):
+
+                        fighters_list.append(i.find('span', class_='sportsbook-outcome-cell__label').text.strip())
+
+                        all_fighters_odds_list.append(i.find('span', class_='sportsbook-odds american default-color').text.strip())
+
+                        target_div = i.find("div", class_="sportsbook-outcome-cell__body")
+
+                        data_tracking = target_div.get('data-tracking')
+
+                        data_tracking_json = json.loads(data_tracking)
+
+                        event_id = data_tracking_json.get('eventId')
+
+                        bout_ids.append(int(event_id))
 
                 # Make a list of the first fighters in the bout using the list of all fighters
                 fighter_1 = [fighters_list[i] for i in range(0, len(fighters_list), 2)]
@@ -41,30 +60,14 @@ def scrape_dk():
                 # Make a list of the second fighters (opponents) in the bout using the list of all fighters
                 fighter_2 = [fighters_list[i + 1] for i in range(0, len(fighters_list), 2)]
 
-                all_fighters_odds_list = [odds.text.strip() for odds in soup.find_all("span", class_="sportsbook-odds american default-color")]
-
                 # Make a list of the odds for the first fighters
                 fighter_1_odds = [all_fighters_odds_list[i] for i in range(0, len(all_fighters_odds_list), 2)]
 
                 # Make a list of the odds for the second fighters (opponents)
                 fighter_2_odds = [all_fighters_odds_list[i + 1] for i in range(0, len(all_fighters_odds_list), 2)]
 
-                # Get all the HTML elements with "a"
-                all_a_tags = soup.find("div", class_="sportsbook-offer-category-card").find_all("a")
-
-                # Pull the bout id from the href found in the "a" element
-                bout_ids = []
-                for a_tag in all_a_tags:
-                    href = a_tag.get('href')
-                    if href and '/event/' in href:
-                        bout_id = href.split('/')[-1]
-                        try:
-                            bout_ids.append(int(bout_id))
-                        except:
-                            None
-
                 # Make a list of the bout ids 
-                fighter_bout_id = bout_ids
+                fighter_bout_id = [bout_ids[i] for i in range(0, len(fighters_list), 2)]
 
                 # Sort the column data to make ready to return
                 data = list(zip(fighter_1, fighter_1_odds, fighter_2, fighter_2_odds, fighter_bout_id))
@@ -135,7 +138,7 @@ def main():
                 # Send email update of new fight data (name of file, message body, and subject)
                 send_email(csv_filename, body, "New Boxing Odds")
 
-        time.sleep(60)  # Wait for 60 seconds before scraping again
+        time.sleep(10)  # Wait for 60 seconds before scraping again
 
 if __name__ == "__main__":
     main()
