@@ -54,25 +54,31 @@ def scrape_dk():
 
                         bout_ids.append(int(event_id))
 
-                # Make a list of the first fighters in the bout using the list of all fighters
-                fighter_1 = [fighters_list[i] for i in range(0, len(fighters_list), 2)]
+                if fighters_list and len(fighters_list) % 2 == 0:
 
-                # Make a list of the second fighters (opponents) in the bout using the list of all fighters
-                fighter_2 = [fighters_list[i + 1] for i in range(0, len(fighters_list), 2)]
+                    # Make a list of the first fighters in the bout using the list of all fighters
+                    fighter_1 = [fighters_list[i] for i in range(0, len(fighters_list), 2)]
 
-                # Make a list of the odds for the first fighters
-                fighter_1_odds = [all_fighters_odds_list[i] for i in range(0, len(all_fighters_odds_list), 2)]
+                    # Make a list of the second fighters (opponents) in the bout using the list of all fighters
+                    fighter_2 = [fighters_list[i + 1] for i in range(0, len(fighters_list), 2)]
 
-                # Make a list of the odds for the second fighters (opponents)
-                fighter_2_odds = [all_fighters_odds_list[i + 1] for i in range(0, len(all_fighters_odds_list), 2)]
+                    # Make a list of the odds for the first fighters
+                    fighter_1_odds = [all_fighters_odds_list[i] for i in range(0, len(all_fighters_odds_list), 2)]
 
-                # Make a list of the bout ids 
-                fighter_bout_id = [bout_ids[i] for i in range(0, len(fighters_list), 2)]
+                    # Make a list of the odds for the second fighters (opponents)
+                    fighter_2_odds = [all_fighters_odds_list[i + 1] for i in range(0, len(all_fighters_odds_list), 2)]
 
-                # Sort the column data to make ready to return
-                data = list(zip(fighter_1, fighter_1_odds, fighter_2, fighter_2_odds, fighter_bout_id))
+                    # Make a list of the bout ids 
+                    fighter_bout_id = [bout_ids[i] for i in range(0, len(fighters_list), 2)]
 
-                return data
+                    # Sort the column data to make ready to return
+                    data = list(zip(fighter_1, fighter_1_odds, fighter_2, fighter_2_odds, fighter_bout_id))
+
+                    return data
+                
+                else:
+                    
+                    return False
             
             else:
                 current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
